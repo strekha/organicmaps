@@ -269,9 +269,22 @@ public final class Config
 
   public enum UiTheme
   {
+    /**
+     * Follows the device's system-wide light/dark setting.
+     */
     SYSTEM("auto"),
+    /**
+     * Always uses the light theme regardless of time or device settings.
+     */
     LIGHT("default"),
-    DARK("night");
+    /**
+     * Always uses the dark theme regardless of time or device settings.
+     */
+    DARK("night"),
+    /**
+     * Automatically switches between dark and light based on sunrise/sunset at the current location.
+     */
+    SCHEDULED("scheduled");
 
     UiTheme(@NonNull String value)
     {

@@ -388,8 +388,8 @@ public class SettingsPrefsFragment extends BaseXmlSettingsFragment implements La
   private void initMapStylePrefsCallbacks()
   {
     final ListPreference pref = getPreference(getString(R.string.pref_map_appearance));
-    pref.setEntryValues(
-        new CharSequence[] {Config.UiTheme.SYSTEM.value, Config.UiTheme.LIGHT.value, Config.UiTheme.DARK.value});
+    pref.setEntryValues(new CharSequence[] {Config.UiTheme.SYSTEM.value, Config.UiTheme.LIGHT.value,
+                                            Config.UiTheme.DARK.value, Config.UiTheme.SCHEDULED.value});
     pref.setValue(Config.UiTheme.getUiThemePreference().value);
     pref.setSummary(pref.getEntry());
     pref.setOnPreferenceChangeListener((preference, newValue) -> {

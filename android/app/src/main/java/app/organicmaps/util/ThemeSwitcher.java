@@ -17,33 +17,44 @@ import app.organicmaps.sdk.routing.RoutingController;
 import app.organicmaps.sdk.util.Config;
 import app.organicmaps.sdk.util.concurrency.UiThread;
 import java.util.Calendar;
+import java.util.concurrent.TimeUnit;
 
 public enum ThemeSwitcher
 {
   @SuppressLint("StaticFieldLeak")
   INSTANCE;
 
-  private static final long CHECK_INTERVAL_MS = 30 * 60 * 1000;
+  private static final long CHECK_INTERVAL_MS = TimeUnit.MINUTES.toMillis(30);
 
-  private final Runnable mAutoDarkNavigationChecker = new Runnable() {
+  private final Runnable mAutoDarkChecker = new Runnable() {
     @Override
     public void run()
     {
-      // Cancel old checker
-      UiThread.cancelDelayedTasks(mAutoDarkNavigationChecker);
+      // Cancel any previously scheduled run to avoid duplicate callbacks.
+      UiThread.cancelDelayedTasks(mAutoDarkChecker);
 
       final var themePreference = Config.UiTheme.getUiThemePreference();
       final var isNavigating = RoutingController.get().isNavigating();
-      final var isAutoTheme = Config.UiTheme.isAutoDarkNavigationEnabled();
+      // Auto-dark during navigation: switch to dark at night, restore preference during the day.
+      final var maybeNavigationInDark = isNavigating && Config.UiTheme.isAutoDarkNavigationEnabled();
+      // Scheduled theme: always switch to dark at night, light during the day.
+      final var isScheduledTheme = themePreference == Config.UiTheme.SCHEDULED;
+
       final Config.UiTheme newTheme;
-      if (isNavigating && isAutoTheme)
+      if (maybeNavigationInDark || isScheduledTheme)
       {
-        UiThread.runLater(mAutoDarkNavigationChecker, CHECK_INTERVAL_MS);
-        newTheme = isDarkOutside() ? Config.UiTheme.DARK : themePreference;
+        // Re-check periodically so the theme updates when sunrise/sunset occurs.
+        UiThread.runLater(mAutoDarkChecker, CHECK_INTERVAL_MS);
+        // Daytime fallback:
+        // - scheduled theme always returns to light;
+        // - auto-dark navigation restores the user's preferred theme (SYSTEM/LIGHT/DARK).
+        //   SCHEDULED must not propagate as defaultTheme.
+        final var defaultTheme = (maybeNavigationInDark && !isScheduledTheme) ? themePreference : Config.UiTheme.LIGHT;
+        newTheme = isDarkOutside() ? Config.UiTheme.DARK : defaultTheme;
       }
       else
       {
-        // Happens when exiting the Navigation mode. Should restore the preferred theme.
+        // Neither condition is active (e.g. navigation just ended). Restore the preferred theme.
         newTheme = themePreference;
       }
 
@@ -75,14 +86,14 @@ public enum ThemeSwitcher
   @androidx.annotation.UiThread
   public void synchronizeApplicationTheme()
   {
-    if (RoutingController.get().isNavigating())
+    var theme = Config.UiTheme.getUiThemePreference();
+    if (RoutingController.get().isNavigating() || theme == Config.UiTheme.SCHEDULED)
     {
-      mAutoDarkNavigationChecker.run();
+      mAutoDarkChecker.run();
     }
     else
     {
-      UiThread.cancelDelayedTasks(mAutoDarkNavigationChecker);
-      var theme = Config.UiTheme.getUiThemePreference();
+      UiThread.cancelDelayedTasks(mAutoDarkChecker);
       setTheme(theme);
     }
   }
@@ -138,6 +149,9 @@ public enum ThemeSwitcher
         uiModeManager.setApplicationNightMode(UiModeManager.MODE_NIGHT_AUTO);
       AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
       break;
+    case SCHEDULED:
+      throw new IllegalArgumentException("Special case, should be handled differently "
+                                         + "and converted to either dark or light");
     }
 
     if (mLatestTheme != null && mLatestTheme != theme)

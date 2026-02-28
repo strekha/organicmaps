@@ -10,20 +10,19 @@ import androidx.car.app.CarContext;
 import app.organicmaps.R;
 import app.organicmaps.sdk.MapStyle;
 import app.organicmaps.sdk.routing.RoutingController;
-import app.organicmaps.sdk.util.Config;
 
 public final class ThemeUtils
 {
   public enum ThemeMode
   {
-    AUTO(R.string.auto, Config.UiTheme.SYSTEM),
-    LIGHT(R.string.off, Config.UiTheme.LIGHT),
-    NIGHT(R.string.on, Config.UiTheme.DARK);
+    AUTO(R.string.auto, "auto"),
+    LIGHT(R.string.off, "default"),
+    NIGHT(R.string.on, "night");
 
-    ThemeMode(@StringRes int titleId, @NonNull Config.UiTheme config)
+    ThemeMode(@StringRes int titleId, @NonNull String value)
     {
       mTitleId = titleId;
-      mConfig = config;
+      mValue = value;
     }
 
     @StringRes
@@ -33,15 +32,15 @@ public final class ThemeUtils
     }
 
     @NonNull
-    public Config.UiTheme getConfig()
+    private String getValue()
     {
-      return mConfig;
+      return mValue;
     }
 
     @StringRes
     private final int mTitleId;
     @NonNull
-    private final Config.UiTheme mConfig;
+    private final String mValue;
   }
 
   private static final String ANDROID_AUTO_PREFERENCES_FILE_KEY = "ANDROID_AUTO_PREFERENCES_FILE_KEY";
@@ -74,21 +73,19 @@ public final class ThemeUtils
   @UiThread
   public static void setThemeMode(@NonNull CarContext context, @NonNull ThemeMode themeMode)
   {
-    getSharedPreferences(context).edit().putString(THEME_KEY, themeMode.getConfig().value).commit();
+    getSharedPreferences(context).edit().putString(THEME_KEY, themeMode.getValue()).commit();
     update(context, themeMode);
   }
 
   @NonNull
   public static ThemeMode getThemeMode(@NonNull CarContext context)
   {
-    final var preferences = getSharedPreferences(context);
-    final var uiTheme = Config.UiTheme.ofValue(preferences.getString(THEME_KEY, Config.UiTheme.SYSTEM.value));
-
-    return switch (uiTheme)
+    final var savedValue = getSharedPreferences(context).getString(THEME_KEY, ThemeMode.AUTO.getValue());
+    return switch (savedValue)
     {
-      case DARK -> ThemeMode.NIGHT;
-      case LIGHT -> ThemeMode.LIGHT;
-      case SYSTEM -> ThemeMode.AUTO;
+      case "default" -> ThemeMode.LIGHT;
+      case "night" -> ThemeMode.NIGHT;
+      default -> ThemeMode.AUTO;
     };
   }
 

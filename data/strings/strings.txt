@@ -10458,6 +10458,11 @@ vi = Tối
 zh-Hans = 深色
 zh-Hant = 深色
 
+[pref_appearance_scheduled]
+comment = Settings "Appearance" category: "Scheduled" title, should be consistent with the pref_appearance_title translation.
+tags = android-app
+en = Light from dusk till dawn
+
 [pref_tts_other_section_title]
 comment = Title for "Other" section in TTS settings.
 tags = apple-maps
